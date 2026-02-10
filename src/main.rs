@@ -223,8 +223,25 @@ fn handle_action(db: &Database, app: &mut App, action: Action, terminal: &mut Te
                 match app.mode {
                     Mode::Input(InputTarget::NewStory) => {
                         let status = Status::all()[app.selected_column];
-                        if let Err(e) = db.create_story(&text, "", app.epic_filter, status, models::Priority::Medium) {
-                            app.status_message = Some(format!("Error: {}", e));
+                        match db.create_story(&text, "", app.epic_filter, status, models::Priority::Medium) {
+                            Ok(story_id) => {
+                                // Open editor for body
+                                match editor::spawn_editor("") {
+                                    Ok(Some(body)) if !body.trim().is_empty() => {
+                                        if let Err(e) = db.update_story_description(story_id, &body) {
+                                            app.status_message = Some(format!("Error: {}", e));
+                                        }
+                                    }
+                                    Ok(Some(_)) | Ok(None) => {} // empty or cancelled, story has empty body
+                                    Err(e) => {
+                                        app.status_message = Some(format!("Editor error: {}", e));
+                                    }
+                                }
+                                terminal.clear().ok();
+                            }
+                            Err(e) => {
+                                app.status_message = Some(format!("Error: {}", e));
+                            }
                         }
                         app.mode = Mode::Board;
                         refresh_board(db, app);
