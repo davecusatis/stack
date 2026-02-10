@@ -13,7 +13,6 @@ pub enum Mode {
 pub enum InputTarget {
     NewStory,
     EditStoryTitle,
-    EditStoryBody,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

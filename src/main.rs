@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             if let Some(action) = action {
-                handle_action(&database, &mut app, action);
+                handle_action(&database, &mut app, action, &mut terminal);
             }
         }
 
@@ -73,7 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn handle_action(db: &Database, app: &mut App, action: Action) {
+fn handle_action(db: &Database, app: &mut App, action: Action, terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) {
     app.status_message = None;
 
     match action {
@@ -182,8 +182,24 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
         }
         Action::EditStoryBody => {
             if let Some(story) = &app.current_story {
-                app.input_buffer = story.description.clone();
-                app.mode = Mode::Input(InputTarget::EditStoryBody);
+                let id = story.id;
+                match editor::spawn_editor(&story.description) {
+                    Ok(Some(text)) => {
+                        if let Err(e) = db.update_story_description(id, &text) {
+                            app.status_message = Some(format!("Error: {}", e));
+                        }
+                        if let Ok(s) = db.get_story(id) {
+                            app.current_story = Some(s);
+                        }
+                    }
+                    Ok(None) => {
+                        app.status_message = Some("Edit cancelled".to_string());
+                    }
+                    Err(e) => {
+                        app.status_message = Some(format!("Editor error: {}", e));
+                    }
+                }
+                terminal.clear().ok();
             }
         }
         Action::InputChar(c) => app.input_buffer.push(c),
@@ -224,22 +240,11 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
                         }
                         app.mode = Mode::Detail;
                     }
-                    Mode::Input(InputTarget::EditStoryBody) => {
-                        if let Some(story) = &app.current_story {
-                            if let Err(e) = db.update_story_description(story.id, &text) {
-                                app.status_message = Some(format!("Error: {}", e));
-                            }
-                            if let Ok(s) = db.get_story(story.id) {
-                                app.current_story = Some(s);
-                            }
-                        }
-                        app.mode = Mode::Detail;
-                    }
                     _ => { app.mode = Mode::Board; }
                 }
             } else {
                 app.mode = match app.mode {
-                    Mode::Input(InputTarget::EditStoryTitle) | Mode::Input(InputTarget::EditStoryBody) => Mode::Detail,
+                    Mode::Input(InputTarget::EditStoryTitle) => Mode::Detail,
                     _ => Mode::Board,
                 };
             }
@@ -248,7 +253,7 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
         Action::InputCancel => {
             app.input_buffer.clear();
             app.mode = match app.mode {
-                Mode::Input(InputTarget::EditStoryTitle) | Mode::Input(InputTarget::EditStoryBody) => Mode::Detail,
+                Mode::Input(InputTarget::EditStoryTitle) => Mode::Detail,
                 _ => Mode::Board,
             };
         }
