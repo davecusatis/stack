@@ -9,7 +9,7 @@ mod models;
 mod ui;
 
 use std::io;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use clap::Parser;
 use crossterm::event::{self, Event, KeyEventKind};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
@@ -60,6 +60,10 @@ fn run_tui(database: Database) -> Result<(), Box<dyn std::error::Error>> {
     let mut app = App::new();
     refresh_board(&database, &mut app);
 
+    // Auto-refresh every 2 seconds so external changes (e.g. from CLI/agents) appear
+    let mut last_refresh = Instant::now();
+    let refresh_interval = Duration::from_secs(2);
+
     // Main loop
     loop {
         terminal.draw(|frame| ui::render(&app, frame))?;
@@ -78,7 +82,14 @@ fn run_tui(database: Database) -> Result<(), Box<dyn std::error::Error>> {
 
             if let Some(action) = action {
                 handle_action(&database, &mut app, action, &mut terminal);
+                last_refresh = Instant::now();
             }
+        }
+
+        // Periodic refresh to pick up external database changes
+        if last_refresh.elapsed() >= refresh_interval {
+            refresh_board(&database, &mut app);
+            last_refresh = Instant::now();
         }
 
         if app.should_quit {
