@@ -28,7 +28,7 @@ cargo run
 |-----|--------|
 | `←` / `→` | Move between columns |
 | `↑` / `↓` | Move between cards |
-| `Shift+←` / `Shift+→` | Move story to previous/next column |
+| `a` / `s` | Move story to previous/next status |
 | `Enter` | Open story detail |
 | `n` | New story |
 | `d` | Delete story |

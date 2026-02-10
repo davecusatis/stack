@@ -5,8 +5,8 @@ pub fn handle_board_key(key: KeyEvent) -> Option<Action> {
     match key.code {
         KeyCode::Char('q') => Some(Action::Quit),
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Action::Quit),
-        KeyCode::Left if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Action::MoveStoryLeft),
-        KeyCode::Right if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Action::MoveStoryRight),
+        KeyCode::Char('a') => Some(Action::MoveStoryLeft),
+        KeyCode::Char('s') => Some(Action::MoveStoryRight),
         KeyCode::Left => Some(Action::MoveLeft),
         KeyCode::Right => Some(Action::MoveRight),
         KeyCode::Down => Some(Action::MoveDown),
@@ -69,10 +69,6 @@ mod tests {
         KeyEvent::new(code, KeyModifiers::NONE)
     }
 
-    fn shift_key(code: KeyCode) -> KeyEvent {
-        KeyEvent::new(code, KeyModifiers::SHIFT)
-    }
-
     #[test]
     fn board_navigation() {
         assert_eq!(handle_board_key(key(KeyCode::Left)), Some(Action::MoveLeft));
@@ -83,8 +79,8 @@ mod tests {
 
     #[test]
     fn board_story_movement() {
-        assert_eq!(handle_board_key(shift_key(KeyCode::Left)), Some(Action::MoveStoryLeft));
-        assert_eq!(handle_board_key(shift_key(KeyCode::Right)), Some(Action::MoveStoryRight));
+        assert_eq!(handle_board_key(key(KeyCode::Char('a'))), Some(Action::MoveStoryLeft));
+        assert_eq!(handle_board_key(key(KeyCode::Char('s'))), Some(Action::MoveStoryRight));
     }
 
     #[test]
