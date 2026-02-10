@@ -1,4 +1,4 @@
-use crate::models::{Epic, Story, Task};
+use crate::models::{Epic, Story};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -12,25 +12,24 @@ pub enum Mode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputTarget {
     NewStory,
-    NewTask,
     EditStoryTitle,
+    EditStoryBody,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConfirmAction {
     DeleteStory,
-    DeleteTask,
 }
 
 pub struct App {
     pub mode: Mode,
     pub selected_column: usize,
     pub selected_card: [usize; 4],
-    pub selected_task: usize,
+    pub list_selection: usize,
+    pub scroll_offset: u16,
     pub epic_filter: Option<i64>,
     pub columns: [Vec<Story>; 4],
     pub epics: Vec<Epic>,
-    pub tasks: Vec<Task>,
     pub current_story: Option<Story>,
     pub input_buffer: String,
     pub status_message: Option<String>,
@@ -43,11 +42,11 @@ impl App {
             mode: Mode::Board,
             selected_column: 0,
             selected_card: [0; 4],
-            selected_task: 0,
+            list_selection: 0,
+            scroll_offset: 0,
             epic_filter: None,
             columns: [vec![], vec![], vec![], vec![]],
             epics: vec![],
-            tasks: vec![],
             current_story: None,
             input_buffer: String::new(),
             status_message: None,

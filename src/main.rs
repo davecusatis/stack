@@ -91,13 +91,11 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
         Action::MoveUp => match app.mode {
             Mode::Board => app.move_card_up(),
             Mode::Detail => {
-                if app.selected_task > 0 {
-                    app.selected_task -= 1;
-                }
+                app.scroll_offset = app.scroll_offset.saturating_sub(1);
             }
             Mode::EpicList => {
-                if app.selected_task > 0 {
-                    app.selected_task -= 1;
+                if app.list_selection > 0 {
+                    app.list_selection -= 1;
                 }
             }
             _ => {}
@@ -105,14 +103,12 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
         Action::MoveDown => match app.mode {
             Mode::Board => app.move_card_down(),
             Mode::Detail => {
-                if app.selected_task < app.tasks.len().saturating_sub(1) {
-                    app.selected_task += 1;
-                }
+                app.scroll_offset = app.scroll_offset.saturating_add(1);
             }
             Mode::EpicList => {
                 let max = app.epics.len();
-                if app.selected_task < max {
-                    app.selected_task += 1;
+                if app.list_selection < max {
+                    app.list_selection += 1;
                 }
             }
             _ => {}
@@ -145,28 +141,21 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
         // Open/close views
         Action::OpenDetail => {
             if let Some(story) = app.selected_story().cloned() {
-                match db.list_tasks(story.id) {
-                    Ok(tasks) => {
-                        app.tasks = tasks;
-                        app.current_story = Some(story);
-                        app.selected_task = 0;
-                        app.mode = Mode::Detail;
-                    }
-                    Err(e) => app.status_message = Some(format!("Error: {}", e)),
-                }
+                app.current_story = Some(story);
+                app.scroll_offset = 0;
+                app.mode = Mode::Detail;
             }
         }
         Action::CloseDetail => {
             app.mode = Mode::Board;
             app.current_story = None;
-            app.tasks.clear();
             refresh_board(db, app);
         }
         Action::OpenEpicList => {
             match db.list_epics() {
                 Ok(epics) => {
                     app.epics = epics;
-                    app.selected_task = if app.epic_filter.is_none() {
+                    app.list_selection = if app.epic_filter.is_none() {
                         0
                     } else {
                         app.epics.iter().position(|e| Some(e.id) == app.epic_filter)
@@ -177,14 +166,11 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
                 Err(e) => app.status_message = Some(format!("Error: {}", e)),
             }
         }
+
         // Input mode
         Action::NewStory => {
             app.input_buffer.clear();
             app.mode = Mode::Input(InputTarget::NewStory);
-        }
-        Action::NewTask => {
-            app.input_buffer.clear();
-            app.mode = Mode::Input(InputTarget::NewTask);
         }
         Action::EditStoryTitle => {
             if let Some(story) = &app.current_story {
@@ -192,15 +178,21 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
                 app.mode = Mode::Input(InputTarget::EditStoryTitle);
             }
         }
+        Action::EditStoryBody => {
+            if let Some(story) = &app.current_story {
+                app.input_buffer = story.description.clone();
+                app.mode = Mode::Input(InputTarget::EditStoryBody);
+            }
+        }
         Action::InputChar(c) => app.input_buffer.push(c),
         Action::InputBackspace => { app.input_buffer.pop(); }
         Action::InputConfirm => {
             // Handle epic list selection via InputConfirm
             if app.mode == Mode::EpicList {
-                let eid = if app.selected_task == 0 {
+                let eid = if app.list_selection == 0 {
                     None
                 } else {
-                    app.epics.get(app.selected_task - 1).map(|e| e.id)
+                    app.epics.get(app.list_selection - 1).map(|e| e.id)
                 };
                 app.epic_filter = eid;
                 app.mode = Mode::Board;
@@ -219,21 +211,20 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
                         app.mode = Mode::Board;
                         refresh_board(db, app);
                     }
-                    Mode::Input(InputTarget::NewTask) => {
+                    Mode::Input(InputTarget::EditStoryTitle) => {
                         if let Some(story) = &app.current_story {
-                            let sid = story.id;
-                            if let Err(e) = db.create_task(sid, &text) {
+                            if let Err(e) = db.update_story_title(story.id, &text) {
                                 app.status_message = Some(format!("Error: {}", e));
                             }
-                            if let Ok(tasks) = db.list_tasks(sid) {
-                                app.tasks = tasks;
+                            if let Ok(s) = db.get_story(story.id) {
+                                app.current_story = Some(s);
                             }
                         }
                         app.mode = Mode::Detail;
                     }
-                    Mode::Input(InputTarget::EditStoryTitle) => {
+                    Mode::Input(InputTarget::EditStoryBody) => {
                         if let Some(story) = &app.current_story {
-                            if let Err(e) = db.update_story_title(story.id, &text) {
+                            if let Err(e) = db.update_story_description(story.id, &text) {
                                 app.status_message = Some(format!("Error: {}", e));
                             }
                             if let Ok(s) = db.get_story(story.id) {
@@ -246,7 +237,7 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
                 }
             } else {
                 app.mode = match app.mode {
-                    Mode::Input(InputTarget::NewTask) | Mode::Input(InputTarget::EditStoryTitle) => Mode::Detail,
+                    Mode::Input(InputTarget::EditStoryTitle) | Mode::Input(InputTarget::EditStoryBody) => Mode::Detail,
                     _ => Mode::Board,
                 };
             }
@@ -255,7 +246,7 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
         Action::InputCancel => {
             app.input_buffer.clear();
             app.mode = match app.mode {
-                Mode::Input(InputTarget::NewTask) | Mode::Input(InputTarget::EditStoryTitle) => Mode::Detail,
+                Mode::Input(InputTarget::EditStoryTitle) | Mode::Input(InputTarget::EditStoryBody) => Mode::Detail,
                 _ => Mode::Board,
             };
         }
@@ -266,63 +257,20 @@ fn handle_action(db: &Database, app: &mut App, action: Action) {
                 app.mode = Mode::Confirm(ConfirmAction::DeleteStory);
             }
         }
-        Action::DeleteTask => {
-            if !app.tasks.is_empty() {
-                app.mode = Mode::Confirm(ConfirmAction::DeleteTask);
-            }
-        }
         Action::ConfirmYes => {
-            match app.mode {
-                Mode::Confirm(ConfirmAction::DeleteStory) => {
-                    if let Some(story) = app.selected_story() {
-                        let id = story.id;
-                        if let Err(e) = db.delete_story(id) {
-                            app.status_message = Some(format!("Error: {}", e));
-                        }
+            if let Mode::Confirm(ConfirmAction::DeleteStory) = app.mode {
+                if let Some(story) = app.selected_story() {
+                    let id = story.id;
+                    if let Err(e) = db.delete_story(id) {
+                        app.status_message = Some(format!("Error: {}", e));
                     }
-                    app.mode = Mode::Board;
-                    refresh_board(db, app);
                 }
-                Mode::Confirm(ConfirmAction::DeleteTask) => {
-                    if let Some(task) = app.tasks.get(app.selected_task) {
-                        let tid = task.id;
-                        if let Err(e) = db.delete_task(tid) {
-                            app.status_message = Some(format!("Error: {}", e));
-                        }
-                        if let Some(story) = &app.current_story
-                            && let Ok(tasks) = db.list_tasks(story.id)
-                        {
-                            app.tasks = tasks;
-                            if app.selected_task >= app.tasks.len() && app.selected_task > 0 {
-                                app.selected_task -= 1;
-                            }
-                        }
-                    }
-                    app.mode = Mode::Detail;
-                }
-                _ => { app.mode = Mode::Board; }
+                app.mode = Mode::Board;
+                refresh_board(db, app);
             }
         }
         Action::ConfirmNo => {
-            app.mode = match app.mode {
-                Mode::Confirm(ConfirmAction::DeleteTask) => Mode::Detail,
-                _ => Mode::Board,
-            };
-        }
-
-        // Task actions in detail view
-        Action::ToggleTask => {
-            if let Some(task) = app.tasks.get(app.selected_task) {
-                let tid = task.id;
-                if let Err(e) = db.toggle_task(tid) {
-                    app.status_message = Some(format!("Error: {}", e));
-                }
-                if let Some(story) = &app.current_story
-                    && let Ok(tasks) = db.list_tasks(story.id)
-                {
-                    app.tasks = tasks;
-                }
-            }
+            app.mode = Mode::Board;
         }
     }
 }

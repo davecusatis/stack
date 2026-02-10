@@ -23,7 +23,7 @@ pub fn render(app: &App, frame: &mut Frame) {
 
     let mut items: Vec<ListItem> = vec![];
 
-    let all_selected = app.epic_filter.is_none() && app.selected_task == 0;
+    let all_selected = app.epic_filter.is_none() && app.list_selection == 0;
     let all_style = if all_selected {
         Style::default().fg(Color::Black).bg(Color::Cyan)
     } else {
@@ -32,7 +32,7 @@ pub fn render(app: &App, frame: &mut Frame) {
     items.push(ListItem::new(Line::from(Span::styled(" All Epics", all_style))));
 
     for (i, epic) in app.epics.iter().enumerate() {
-        let is_selected = app.selected_task == i + 1;
+        let is_selected = app.list_selection == i + 1;
         let style = if is_selected {
             Style::default().fg(Color::Black).bg(Color::Cyan)
         } else {

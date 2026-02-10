@@ -24,10 +24,8 @@ pub fn handle_detail_key(key: KeyEvent) -> Option<Action> {
         KeyCode::Esc => Some(Action::CloseDetail),
         KeyCode::Char('j') => Some(Action::MoveDown),
         KeyCode::Char('k') => Some(Action::MoveUp),
-        KeyCode::Char(' ') => Some(Action::ToggleTask),
-        KeyCode::Char('n') => Some(Action::NewTask),
-        KeyCode::Char('d') => Some(Action::DeleteTask),
         KeyCode::Char('e') => Some(Action::EditStoryTitle),
+        KeyCode::Char('b') => Some(Action::EditStoryBody),
         KeyCode::Char('q') => Some(Action::Quit),
         _ => None,
     }
@@ -99,7 +97,8 @@ mod tests {
     #[test]
     fn detail_navigation() {
         assert_eq!(handle_detail_key(key(KeyCode::Char('j'))), Some(Action::MoveDown));
-        assert_eq!(handle_detail_key(key(KeyCode::Char(' '))), Some(Action::ToggleTask));
+        assert_eq!(handle_detail_key(key(KeyCode::Char('e'))), Some(Action::EditStoryTitle));
+        assert_eq!(handle_detail_key(key(KeyCode::Char('b'))), Some(Action::EditStoryBody));
         assert_eq!(handle_detail_key(key(KeyCode::Esc)), Some(Action::CloseDetail));
     }
 

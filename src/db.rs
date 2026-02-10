@@ -1,5 +1,5 @@
 use rusqlite::{Connection, Result};
-use crate::models::{Epic, Story, Task, Status, Priority};
+use crate::models::{Epic, Story, Status, Priority};
 
 pub struct Database {
     conn: Connection,
@@ -74,7 +74,8 @@ impl Database {
                 title TEXT NOT NULL,
                 done INTEGER NOT NULL DEFAULT 0,
                 sort_order INTEGER NOT NULL DEFAULT 0
-            );"
+            );
+            -- Legacy table kept for migration compat; not used by app"
         )?;
         Ok(())
     }
@@ -190,63 +191,12 @@ impl Database {
         Ok(())
     }
 
-    // --- Task CRUD ---
-
-    pub fn create_task(&self, story_id: i64, title: &str) -> Result<i64> {
-        let next_order: i32 = self.conn.query_row(
-            "SELECT COALESCE(MAX(sort_order) + 1, 0) FROM tasks WHERE story_id = ?1",
-            [story_id],
-            |row| row.get(0),
-        )?;
+    pub fn update_story_description(&self, id: i64, description: &str) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO tasks (story_id, title, sort_order) VALUES (?1, ?2, ?3)",
-            rusqlite::params![story_id, title, next_order],
-        )?;
-        Ok(self.conn.last_insert_rowid())
-    }
-
-    pub fn list_tasks(&self, story_id: i64) -> Result<Vec<Task>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, story_id, title, done, sort_order FROM tasks WHERE story_id = ?1 ORDER BY sort_order"
-        )?;
-        let tasks = stmt.query_map([story_id], |row| {
-            Ok(Task {
-                id: row.get(0)?,
-                story_id: row.get(1)?,
-                title: row.get(2)?,
-                done: row.get(3)?,
-                sort_order: row.get(4)?,
-            })
-        })?.collect::<Result<Vec<_>>>()?;
-        Ok(tasks)
-    }
-
-    pub fn toggle_task(&self, id: i64) -> Result<()> {
-        self.conn.execute(
-            "UPDATE tasks SET done = NOT done WHERE id = ?1",
-            [id],
+            "UPDATE stories SET description = ?1, updated_at = datetime('now') WHERE id = ?2",
+            rusqlite::params![description, id],
         )?;
         Ok(())
-    }
-
-    pub fn delete_task(&self, id: i64) -> Result<()> {
-        self.conn.execute("DELETE FROM tasks WHERE id = ?1", [id])?;
-        Ok(())
-    }
-
-    #[allow(dead_code)]
-    pub fn task_counts(&self, story_id: i64) -> Result<(i32, i32)> {
-        let total: i32 = self.conn.query_row(
-            "SELECT COUNT(*) FROM tasks WHERE story_id = ?1",
-            [story_id],
-            |row| row.get(0),
-        )?;
-        let done: i32 = self.conn.query_row(
-            "SELECT COUNT(*) FROM tasks WHERE story_id = ?1 AND done = 1",
-            [story_id],
-            |row| row.get(0),
-        )?;
-        Ok((done, total))
     }
 }
 
@@ -341,58 +291,12 @@ mod tests {
         assert_eq!(stories.len(), 0);
     }
 
-    // --- Task tests ---
-
     #[test]
-    fn create_and_list_tasks() {
+    fn update_story_description() {
         let db = test_db();
         let sid = db.create_story("S1", "", None, Status::ToDo, Priority::Medium).unwrap();
-        db.create_task(sid, "Write tests").unwrap();
-        db.create_task(sid, "Implement feature").unwrap();
-
-        let tasks = db.list_tasks(sid).unwrap();
-        assert_eq!(tasks.len(), 2);
-        assert_eq!(tasks[0].title, "Write tests");
-        assert_eq!(tasks[0].sort_order, 0);
-        assert_eq!(tasks[1].sort_order, 1);
-        assert!(!tasks[0].done);
-    }
-
-    #[test]
-    fn toggle_task() {
-        let db = test_db();
-        let sid = db.create_story("S1", "", None, Status::ToDo, Priority::Medium).unwrap();
-        let tid = db.create_task(sid, "Task 1").unwrap();
-
-        db.toggle_task(tid).unwrap();
-        let tasks = db.list_tasks(sid).unwrap();
-        assert!(tasks[0].done);
-
-        db.toggle_task(tid).unwrap();
-        let tasks = db.list_tasks(sid).unwrap();
-        assert!(!tasks[0].done);
-    }
-
-    #[test]
-    fn delete_task() {
-        let db = test_db();
-        let sid = db.create_story("S1", "", None, Status::ToDo, Priority::Medium).unwrap();
-        let tid = db.create_task(sid, "Task 1").unwrap();
-        db.delete_task(tid).unwrap();
-        let tasks = db.list_tasks(sid).unwrap();
-        assert_eq!(tasks.len(), 0);
-    }
-
-    #[test]
-    fn task_count_for_story() {
-        let db = test_db();
-        let sid = db.create_story("S1", "", None, Status::ToDo, Priority::Medium).unwrap();
-        db.create_task(sid, "T1").unwrap();
-        let tid2 = db.create_task(sid, "T2").unwrap();
-        db.toggle_task(tid2).unwrap();
-
-        let (done, total) = db.task_counts(sid).unwrap();
-        assert_eq!(total, 2);
-        assert_eq!(done, 1);
+        db.update_story_description(sid, "# Heading\n\nSome **markdown** body").unwrap();
+        let story = db.get_story(sid).unwrap();
+        assert_eq!(story.description, "# Heading\n\nSome **markdown** body");
     }
 }

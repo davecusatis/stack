@@ -94,16 +94,6 @@ pub struct Story {
     pub updated_at: String,
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct Task {
-    pub id: i64,
-    pub story_id: i64,
-    pub title: String,
-    pub done: bool,
-    pub sort_order: i32,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,17 +122,5 @@ mod tests {
     fn priority_display() {
         assert_eq!(Priority::Low.as_str(), "Low");
         assert_eq!(Priority::Critical.as_str(), "Critical");
-    }
-
-    #[test]
-    fn task_completion() {
-        let task = Task {
-            id: 1,
-            story_id: 1,
-            title: "Write tests".to_string(),
-            done: false,
-            sort_order: 0,
-        };
-        assert!(!task.done);
     }
 }

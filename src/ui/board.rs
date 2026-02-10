@@ -57,25 +57,35 @@ fn render_columns(app: &App, frame: &mut Frame, area: Rect) {
             .enumerate()
             .map(|(j, story)| {
                 let is_selected = is_selected_col && j == app.selected_card[i];
-                let style = if is_selected {
-                    Style::default().fg(Color::Black).bg(Color::Cyan)
-                } else {
-                    Style::default()
-                };
                 let priority_color = match story.priority {
                     crate::models::Priority::Critical => Color::Red,
                     crate::models::Priority::High => Color::Yellow,
                     crate::models::Priority::Medium => Color::Blue,
                     crate::models::Priority::Low => Color::DarkGray,
                 };
+                let (pri_style, title_style) = if is_selected {
+                    (
+                        Style::default().fg(priority_color).bg(Color::Cyan),
+                        Style::default().fg(Color::Black).bg(Color::Cyan),
+                    )
+                } else {
+                    (
+                        Style::default().fg(priority_color),
+                        Style::default(),
+                    )
+                };
                 let line = Line::from(vec![
                     Span::styled(
                         format!(" {} ", story.priority.as_str().chars().next().unwrap_or('?')),
-                        Style::default().fg(priority_color),
+                        pri_style,
                     ),
-                    Span::styled(&story.title, style),
+                    Span::styled(&story.title, title_style),
                 ]);
-                ListItem::new(line)
+                let mut item = ListItem::new(line);
+                if is_selected {
+                    item = item.style(Style::default().bg(Color::Cyan));
+                }
+                item
             })
             .collect();
 
