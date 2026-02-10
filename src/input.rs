@@ -5,12 +5,12 @@ pub fn handle_board_key(key: KeyEvent) -> Option<Action> {
     match key.code {
         KeyCode::Char('q') => Some(Action::Quit),
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Action::Quit),
-        KeyCode::Char('h') => Some(Action::MoveLeft),
-        KeyCode::Char('l') => Some(Action::MoveRight),
-        KeyCode::Char('j') => Some(Action::MoveDown),
-        KeyCode::Char('k') => Some(Action::MoveUp),
-        KeyCode::Char('H') => Some(Action::MoveStoryLeft),
-        KeyCode::Char('L') => Some(Action::MoveStoryRight),
+        KeyCode::Left if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Action::MoveStoryLeft),
+        KeyCode::Right if key.modifiers.contains(KeyModifiers::SHIFT) => Some(Action::MoveStoryRight),
+        KeyCode::Left => Some(Action::MoveLeft),
+        KeyCode::Right => Some(Action::MoveRight),
+        KeyCode::Down => Some(Action::MoveDown),
+        KeyCode::Up => Some(Action::MoveUp),
         KeyCode::Enter => Some(Action::OpenDetail),
         KeyCode::Char('n') => Some(Action::NewStory),
         KeyCode::Char('d') => Some(Action::DeleteStory),
@@ -22,8 +22,8 @@ pub fn handle_board_key(key: KeyEvent) -> Option<Action> {
 pub fn handle_detail_key(key: KeyEvent) -> Option<Action> {
     match key.code {
         KeyCode::Esc => Some(Action::CloseDetail),
-        KeyCode::Char('j') => Some(Action::MoveDown),
-        KeyCode::Char('k') => Some(Action::MoveUp),
+        KeyCode::Down => Some(Action::MoveDown),
+        KeyCode::Up => Some(Action::MoveUp),
         KeyCode::Char('e') => Some(Action::EditStoryTitle),
         KeyCode::Char('b') => Some(Action::EditStoryBody),
         KeyCode::Char('q') => Some(Action::Quit),
@@ -34,8 +34,8 @@ pub fn handle_detail_key(key: KeyEvent) -> Option<Action> {
 pub fn handle_epic_list_key(key: KeyEvent) -> Option<Action> {
     match key.code {
         KeyCode::Esc => Some(Action::CloseDetail),
-        KeyCode::Char('j') => Some(Action::MoveDown),
-        KeyCode::Char('k') => Some(Action::MoveUp),
+        KeyCode::Down => Some(Action::MoveDown),
+        KeyCode::Up => Some(Action::MoveUp),
         KeyCode::Enter => Some(Action::InputConfirm),
         KeyCode::Char('q') => Some(Action::Quit),
         _ => None,
@@ -69,18 +69,22 @@ mod tests {
         KeyEvent::new(code, KeyModifiers::NONE)
     }
 
+    fn shift_key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::SHIFT)
+    }
+
     #[test]
     fn board_navigation() {
-        assert_eq!(handle_board_key(key(KeyCode::Char('h'))), Some(Action::MoveLeft));
-        assert_eq!(handle_board_key(key(KeyCode::Char('l'))), Some(Action::MoveRight));
-        assert_eq!(handle_board_key(key(KeyCode::Char('j'))), Some(Action::MoveDown));
-        assert_eq!(handle_board_key(key(KeyCode::Char('k'))), Some(Action::MoveUp));
+        assert_eq!(handle_board_key(key(KeyCode::Left)), Some(Action::MoveLeft));
+        assert_eq!(handle_board_key(key(KeyCode::Right)), Some(Action::MoveRight));
+        assert_eq!(handle_board_key(key(KeyCode::Down)), Some(Action::MoveDown));
+        assert_eq!(handle_board_key(key(KeyCode::Up)), Some(Action::MoveUp));
     }
 
     #[test]
     fn board_story_movement() {
-        assert_eq!(handle_board_key(key(KeyCode::Char('H'))), Some(Action::MoveStoryLeft));
-        assert_eq!(handle_board_key(key(KeyCode::Char('L'))), Some(Action::MoveStoryRight));
+        assert_eq!(handle_board_key(shift_key(KeyCode::Left)), Some(Action::MoveStoryLeft));
+        assert_eq!(handle_board_key(shift_key(KeyCode::Right)), Some(Action::MoveStoryRight));
     }
 
     #[test]
@@ -92,7 +96,8 @@ mod tests {
 
     #[test]
     fn detail_navigation() {
-        assert_eq!(handle_detail_key(key(KeyCode::Char('j'))), Some(Action::MoveDown));
+        assert_eq!(handle_detail_key(key(KeyCode::Down)), Some(Action::MoveDown));
+        assert_eq!(handle_detail_key(key(KeyCode::Up)), Some(Action::MoveUp));
         assert_eq!(handle_detail_key(key(KeyCode::Char('e'))), Some(Action::EditStoryTitle));
         assert_eq!(handle_detail_key(key(KeyCode::Char('b'))), Some(Action::EditStoryBody));
         assert_eq!(handle_detail_key(key(KeyCode::Esc)), Some(Action::CloseDetail));

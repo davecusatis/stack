@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
 use crate::app::App;
 use crate::models::Status;
 
@@ -54,38 +54,21 @@ fn render_columns(app: &App, frame: &mut Frame, area: Rect) {
 
         let items: Vec<ListItem> = app.columns[i]
             .iter()
-            .enumerate()
-            .map(|(j, story)| {
-                let is_selected = is_selected_col && j == app.selected_card[i];
+            .map(|story| {
                 let priority_color = match story.priority {
                     crate::models::Priority::Critical => Color::Red,
                     crate::models::Priority::High => Color::Yellow,
                     crate::models::Priority::Medium => Color::Blue,
                     crate::models::Priority::Low => Color::DarkGray,
                 };
-                let (pri_style, title_style) = if is_selected {
-                    (
-                        Style::default().fg(priority_color).bg(Color::Cyan),
-                        Style::default().fg(Color::Black).bg(Color::Cyan),
-                    )
-                } else {
-                    (
-                        Style::default().fg(priority_color),
-                        Style::default(),
-                    )
-                };
                 let line = Line::from(vec![
                     Span::styled(
                         format!(" {} ", story.priority.as_str().chars().next().unwrap_or('?')),
-                        pri_style,
+                        Style::default().fg(priority_color),
                     ),
-                    Span::styled(&story.title, title_style),
+                    Span::raw(&story.title),
                 ]);
-                let mut item = ListItem::new(line);
-                if is_selected {
-                    item = item.style(Style::default().bg(Color::Cyan));
-                }
-                item
+                ListItem::new(line)
             })
             .collect();
 
@@ -96,14 +79,28 @@ fn render_columns(app: &App, frame: &mut Frame, area: Rect) {
             .title(title)
             .border_style(border_style);
 
-        let list = List::new(items).block(block);
-        frame.render_widget(list, col_chunks[i]);
+        let highlight_style = if is_selected_col {
+            Style::default().fg(Color::Black).bg(Color::Cyan)
+        } else {
+            Style::default()
+        };
+
+        let list = List::new(items)
+            .block(block)
+            .highlight_style(highlight_style);
+
+        let mut state = ListState::default();
+        if is_selected_col && !app.columns[i].is_empty() {
+            state.select(Some(app.selected_card[i]));
+        }
+
+        frame.render_stateful_widget(list, col_chunks[i], &mut state);
     }
 }
 
 fn render_footer(app: &App, frame: &mut Frame, area: Rect) {
     let hints = match app.mode {
-        crate::app::Mode::Board => "j/k: nav  h/l: column  H/L: move story  Enter: open  n: new  d: delete  e: epics  q: quit",
+        crate::app::Mode::Board => "↑↓: nav  ←→: column  Shift+←→: move story  Enter: open  n: new  d: delete  e: epics  q: quit",
         _ => "",
     };
     let msg = if let Some(ref status) = app.status_message {

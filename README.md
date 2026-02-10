@@ -26,9 +26,9 @@ cargo run
 
 | Key | Action |
 |-----|--------|
-| `h` / `l` | Move between columns |
-| `j` / `k` | Move between cards |
-| `H` / `L` | Move story to previous/next column |
+| `←` / `→` | Move between columns |
+| `↑` / `↓` | Move between cards |
+| `Shift+←` / `Shift+→` | Move story to previous/next column |
 | `Enter` | Open story detail |
 | `n` | New story |
 | `d` | Delete story |
@@ -39,7 +39,7 @@ cargo run
 
 | Key | Action |
 |-----|--------|
-| `j` / `k` | Scroll body |
+| `↑` / `↓` | Scroll body |
 | `e` | Edit title |
 | `b` | Edit body (markdown) |
 | `Esc` | Back to board |
@@ -48,7 +48,7 @@ cargo run
 
 | Key | Action |
 |-----|--------|
-| `j` / `k` | Navigate |
+| `↑` / `↓` | Navigate |
 | `Enter` | Select epic filter |
 | `Esc` | Back to board |
 

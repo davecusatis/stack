@@ -66,7 +66,7 @@ pub fn render(app: &App, frame: &mut Frame) {
 
     // Footer
     let footer = Paragraph::new(Span::styled(
-        "j/k: scroll  e: edit title  b: edit body  Esc: back",
+        "↑↓: scroll  e: edit title  b: edit body  Esc: back",
         Style::default().fg(Color::DarkGray),
     ));
     frame.render_widget(footer, chunks[2]);
