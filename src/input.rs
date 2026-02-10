@@ -2,19 +2,19 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use crate::actions::Action;
 
 pub fn handle_board_key(key: KeyEvent) -> Option<Action> {
-    match (key.code, key.modifiers) {
-        (KeyCode::Char('q'), _) => Some(Action::Quit),
-        (KeyCode::Char('c'), KeyModifiers::CONTROL) => Some(Action::Quit),
-        (KeyCode::Char('h'), KeyModifiers::NONE) => Some(Action::MoveLeft),
-        (KeyCode::Char('l'), KeyModifiers::NONE) => Some(Action::MoveRight),
-        (KeyCode::Char('j'), KeyModifiers::NONE) => Some(Action::MoveDown),
-        (KeyCode::Char('k'), KeyModifiers::NONE) => Some(Action::MoveUp),
-        (KeyCode::Char('H'), KeyModifiers::SHIFT) => Some(Action::MoveStoryLeft),
-        (KeyCode::Char('L'), KeyModifiers::SHIFT) => Some(Action::MoveStoryRight),
-        (KeyCode::Enter, _) => Some(Action::OpenDetail),
-        (KeyCode::Char('n'), _) => Some(Action::NewStory),
-        (KeyCode::Char('d'), _) => Some(Action::DeleteStory),
-        (KeyCode::Char('e'), _) => Some(Action::OpenEpicList),
+    match key.code {
+        KeyCode::Char('q') => Some(Action::Quit),
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Action::Quit),
+        KeyCode::Char('h') => Some(Action::MoveLeft),
+        KeyCode::Char('l') => Some(Action::MoveRight),
+        KeyCode::Char('j') => Some(Action::MoveDown),
+        KeyCode::Char('k') => Some(Action::MoveUp),
+        KeyCode::Char('H') => Some(Action::MoveStoryLeft),
+        KeyCode::Char('L') => Some(Action::MoveStoryRight),
+        KeyCode::Enter => Some(Action::OpenDetail),
+        KeyCode::Char('n') => Some(Action::NewStory),
+        KeyCode::Char('d') => Some(Action::DeleteStory),
+        KeyCode::Char('e') => Some(Action::OpenEpicList),
         _ => None,
     }
 }
@@ -69,10 +69,6 @@ mod tests {
         KeyEvent::new(code, KeyModifiers::NONE)
     }
 
-    fn shift_key(code: KeyCode) -> KeyEvent {
-        KeyEvent::new(code, KeyModifiers::SHIFT)
-    }
-
     #[test]
     fn board_navigation() {
         assert_eq!(handle_board_key(key(KeyCode::Char('h'))), Some(Action::MoveLeft));
@@ -83,8 +79,8 @@ mod tests {
 
     #[test]
     fn board_story_movement() {
-        assert_eq!(handle_board_key(shift_key(KeyCode::Char('H'))), Some(Action::MoveStoryLeft));
-        assert_eq!(handle_board_key(shift_key(KeyCode::Char('L'))), Some(Action::MoveStoryRight));
+        assert_eq!(handle_board_key(key(KeyCode::Char('H'))), Some(Action::MoveStoryLeft));
+        assert_eq!(handle_board_key(key(KeyCode::Char('L'))), Some(Action::MoveStoryRight));
     }
 
     #[test]

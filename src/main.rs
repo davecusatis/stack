@@ -7,7 +7,7 @@ mod ui;
 
 use std::io;
 use std::time::Duration;
-use crossterm::event::{self, Event};
+use crossterm::event::{self, Event, KeyEventKind};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::execute;
 use ratatui::backend::CrosstermBackend;
@@ -46,6 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if event::poll(Duration::from_millis(100))?
             && let Event::Key(key) = event::read()?
+            && key.kind == KeyEventKind::Press
         {
             let action = match app.mode {
                 Mode::Board => input::handle_board_key(key),
