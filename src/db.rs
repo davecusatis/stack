@@ -1,5 +1,5 @@
 use rusqlite::{Connection, Result};
-use crate::models::{Epic, Story, Status, Priority};
+use crate::models::{Epic, Story, Task, Status, Priority};
 
 pub struct Database {
     conn: Connection,
@@ -196,6 +196,120 @@ impl Database {
             "UPDATE stories SET description = ?1, updated_at = datetime('now') WHERE id = ?2",
             rusqlite::params![description, id],
         )?;
+        Ok(())
+    }
+
+    pub fn update_story_priority(&self, id: i64, priority: Priority) -> Result<()> {
+        self.conn.execute(
+            "UPDATE stories SET priority = ?1, updated_at = datetime('now') WHERE id = ?2",
+            rusqlite::params![priority_to_db(&priority), id],
+        )?;
+        Ok(())
+    }
+
+    pub fn update_story_epic(&self, id: i64, epic_id: Option<i64>) -> Result<()> {
+        self.conn.execute(
+            "UPDATE stories SET epic_id = ?1, updated_at = datetime('now') WHERE id = ?2",
+            rusqlite::params![epic_id, id],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_stories(&self, status: Option<Status>, epic_id: Option<i64>) -> Result<Vec<Story>> {
+        let mut sql = String::from(
+            "SELECT id, epic_id, title, description, status, priority, created_at, updated_at FROM stories WHERE 1=1"
+        );
+        let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+        let mut idx = 1;
+
+        if let Some(s) = status {
+            sql.push_str(&format!(" AND status = ?{}", idx));
+            params.push(Box::new(status_to_db(&s).to_string()));
+            idx += 1;
+        }
+        if let Some(eid) = epic_id {
+            sql.push_str(&format!(" AND epic_id = ?{}", idx));
+            params.push(Box::new(eid));
+        }
+        sql.push_str(" ORDER BY id");
+
+        let mut stmt = self.conn.prepare(&sql)?;
+        let stories = stmt.query_map(rusqlite::params_from_iter(params.iter()), |row| {
+            let status_str: String = row.get(4)?;
+            let priority_str: String = row.get(5)?;
+            Ok(Story {
+                id: row.get(0)?,
+                epic_id: row.get(1)?,
+                title: row.get(2)?,
+                description: row.get(3)?,
+                status: status_from_db(&status_str),
+                priority: priority_from_db(&priority_str),
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })?.collect::<Result<Vec<_>>>()?;
+        Ok(stories)
+    }
+
+    // --- Task CRUD ---
+
+    pub fn create_task(&self, story_id: i64, title: &str) -> Result<i64> {
+        let max_order: i64 = self.conn.query_row(
+            "SELECT COALESCE(MAX(sort_order), -1) FROM tasks WHERE story_id = ?1",
+            [story_id],
+            |row| row.get(0),
+        )?;
+        self.conn.execute(
+            "INSERT INTO tasks (story_id, title, sort_order) VALUES (?1, ?2, ?3)",
+            rusqlite::params![story_id, title, max_order + 1],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    pub fn list_tasks(&self, story_id: i64) -> Result<Vec<Task>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, story_id, title, done, sort_order FROM tasks WHERE story_id = ?1 ORDER BY sort_order"
+        )?;
+        let tasks = stmt.query_map([story_id], |row| {
+            let done_int: i64 = row.get(3)?;
+            Ok(Task {
+                id: row.get(0)?,
+                story_id: row.get(1)?,
+                title: row.get(2)?,
+                done: done_int != 0,
+                sort_order: row.get(4)?,
+            })
+        })?.collect::<Result<Vec<_>>>()?;
+        Ok(tasks)
+    }
+
+    pub fn get_task(&self, id: i64) -> Result<Task> {
+        self.conn.query_row(
+            "SELECT id, story_id, title, done, sort_order FROM tasks WHERE id = ?1",
+            [id],
+            |row| {
+                let done_int: i64 = row.get(3)?;
+                Ok(Task {
+                    id: row.get(0)?,
+                    story_id: row.get(1)?,
+                    title: row.get(2)?,
+                    done: done_int != 0,
+                    sort_order: row.get(4)?,
+                })
+            },
+        )
+    }
+
+    pub fn toggle_task(&self, id: i64) -> Result<Task> {
+        self.conn.execute(
+            "UPDATE tasks SET done = NOT done WHERE id = ?1",
+            [id],
+        )?;
+        self.get_task(id)
+    }
+
+    pub fn delete_task(&self, id: i64) -> Result<()> {
+        self.conn.execute("DELETE FROM tasks WHERE id = ?1", [id])?;
         Ok(())
     }
 }
