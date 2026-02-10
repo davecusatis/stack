@@ -4,7 +4,7 @@ A terminal UI kanban board for personal task tracking, built in Rust.
 
 Stack organizes work into **Epics** and **Stories** displayed on a four-column kanban board (To Do, In Progress, In Review, Done). Story bodies are markdown.
 
-<img width="757" height="862" alt="Screenshot 2026-02-09 at 9 19 54 PM" src="https://github.com/user-attachments/assets/3b292e79-749e-4f8f-a182-edd3da7bf265" />
+<img width="1090" height="861" alt="Screenshot 2026-02-09 at 9 33 26 PM" src="https://github.com/user-attachments/assets/f5ca9478-5bef-47ec-95ad-56f8980856dd" />
 
 ## Install
 
