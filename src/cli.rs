@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use crate::models::{Status, Priority};
 
 #[derive(Parser)]
-#[command(name = "stack", about = "Terminal kanban board for personal task tracking")]
+#[command(name = "stack", version, about = "Terminal kanban board for personal task tracking")]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Command>,
