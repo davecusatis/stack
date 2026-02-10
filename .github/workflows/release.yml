@@ -58,3 +58,66 @@ jobs:
             stack-x86_64-apple-darwin/stack-x86_64-apple-darwin.tar.gz
             stack-x86_64-unknown-linux-gnu/stack-x86_64-unknown-linux-gnu.tar.gz
           generate_release_notes: true
+
+  update-tap:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute SHA256 hashes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          REPO="davecusatis/stack"
+          for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-gnu; do
+            curl -sL "https://github.com/${REPO}/releases/download/v${VERSION}/stack-${target}.tar.gz" -o "stack-${target}.tar.gz"
+          done
+          echo "SHA_ARM64=$(sha256sum stack-aarch64-apple-darwin.tar.gz | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "SHA_X86_64=$(sha256sum stack-x86_64-apple-darwin.tar.gz | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "SHA_LINUX=$(sha256sum stack-x86_64-unknown-linux-gnu.tar.gz | cut -d' ' -f1)" >> "$GITHUB_ENV"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          cat > stack.rb << FORMULA
+          class Stack < Formula
+            desc "Terminal-based kanban board for personal task tracking"
+            homepage "https://github.com/davecusatis/stack"
+            version "${VERSION}"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/davecusatis/stack/releases/download/v${VERSION}/stack-aarch64-apple-darwin.tar.gz"
+                sha256 "${SHA_ARM64}"
+              else
+                url "https://github.com/davecusatis/stack/releases/download/v${VERSION}/stack-x86_64-apple-darwin.tar.gz"
+                sha256 "${SHA_X86_64}"
+              end
+            end
+
+            on_linux do
+              url "https://github.com/davecusatis/stack/releases/download/v${VERSION}/stack-x86_64-unknown-linux-gnu.tar.gz"
+              sha256 "${SHA_LINUX}"
+            end
+
+            def install
+              bin.install "stack"
+            end
+
+            test do
+              assert_match version.to_s, shell_output("#{bin}/stack --version")
+            end
+          end
+          FORMULA
+
+          # Push formula to tap repo
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/davecusatis/homebrew-tap.git" tap
+          mkdir -p tap/Formula
+          cp stack.rb tap/Formula/stack.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/stack.rb
+          git commit -m "Update stack to ${VERSION}"
+          git push
