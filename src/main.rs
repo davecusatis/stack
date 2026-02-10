@@ -1,5 +1,7 @@
 mod actions;
 mod app;
+mod cli;
+mod cli_handler;
 mod db;
 mod input;
 mod models;
@@ -7,6 +9,7 @@ mod ui;
 
 use std::io;
 use std::time::Duration;
+use clap::Parser;
 use crossterm::event::{self, Event, KeyEventKind};
 use crossterm::terminal::{self, EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::execute;
@@ -19,6 +22,8 @@ use db::Database;
 use models::Status;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cli = cli::Cli::parse();
+
     // Resolve data directory
     let data_dir = dirs::data_dir()
         .expect("Could not determine data directory")
@@ -29,6 +34,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut database = Database::open(&data_dir.join("stack.db"))?;
     database.migrate()?;
 
+    // If a subcommand was given, run CLI mode
+    if let Some(command) = cli.command {
+        if let Err(e) = cli_handler::run(command, &database) {
+            eprintln!("{}", serde_json::json!({ "error": e.to_string() }));
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
+    // Otherwise, launch TUI
+    run_tui(database)
+}
+
+fn run_tui(database: Database) -> Result<(), Box<dyn std::error::Error>> {
     // Setup terminal
     terminal::enable_raw_mode()?;
     let mut stdout = io::stdout();
