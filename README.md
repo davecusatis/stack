@@ -8,16 +8,19 @@ Stack organizes work into **Epics** and **Stories** displayed on a four-column k
 
 ## Install
 
+### Homebrew
+
+```
+brew tap davecusatis/tap
+brew install stack
+```
+
+### From source
+
 Requires Rust 1.85+ (2024 edition).
 
 ```
 cargo install --path .
-```
-
-Or run directly:
-
-```
-cargo run
 ```
 
 ## Usage
