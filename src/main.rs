@@ -1,6 +1,7 @@
 mod actions;
 mod app;
 mod db;
+mod editor;
 mod input;
 mod models;
 mod ui;
