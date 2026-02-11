@@ -11,13 +11,12 @@ Stack organizes work into **Epics** and **Stories** displayed on a four-column k
 ### Homebrew
 
 ```
-brew tap davecusatis/tap/stack
-brew install stack
+brew install davecusatis/tap/stack
 ```
 
 ### From source
 
-Requires Rust 1.85+ (2024 edition).
+Requires Rust 1.85+ (2024 edition). SQLite is bundled, so no system dependencies are needed. The first build compiles SQLite from C source and may take ~30s.
 
 ```
 cargo install --path .
@@ -29,8 +28,8 @@ cargo install --path .
 
 | Key | Action |
 |-----|--------|
-| `←` / `→` | Move between columns |
-| `↑` / `↓` | Move between cards |
+| `←` `→` or `h` `l` | Move between columns |
+| `↑` `↓` or `j` `k` | Move between cards |
 | `a` / `s` | Move story to previous/next status |
 | `Enter` | Open story detail |
 | `n` | New story |
@@ -42,7 +41,7 @@ cargo install --path .
 
 | Key | Action |
 |-----|--------|
-| `↑` / `↓` | Scroll body |
+| `↑` `↓` or `j` `k` | Scroll body |
 | `e` | Edit title |
 | `b` | Edit body (markdown) |
 | `Esc` | Back to board |
@@ -51,13 +50,15 @@ cargo install --path .
 
 | Key | Action |
 |-----|--------|
-| `↑` / `↓` | Navigate |
+| `↑` `↓` or `j` `k` | Navigate |
 | `Enter` | Select epic filter |
 | `Esc` | Back to board |
 
 ## Data Storage
 
-SQLite database at `~/.local/share/stack/stack.db`. Created automatically on first run.
+SQLite database created automatically on first run:
+- **macOS:** `~/Library/Application Support/stack/stack.db`
+- **Linux:** `~/.local/share/stack/stack.db`
 
 ## Dependencies
 
