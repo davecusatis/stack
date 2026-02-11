@@ -159,7 +159,7 @@ fn render_preview(app: &App, frame: &mut Frame, area: Rect) {
 
 fn render_footer(app: &App, frame: &mut Frame, area: Rect) {
     let hints = match app.mode {
-        crate::app::Mode::Board => "↑↓←→: nav  a/s: move story  Enter: open  n: new  d: delete  e: epics  q: quit",
+        crate::app::Mode::Board => "hjkl/↑↓←→: nav  a/s: move story  Enter: open  n: new  d: delete  e: epics  q: quit",
         _ => "",
     };
     let msg = if let Some(ref status) = app.status_message {
