@@ -11,7 +11,7 @@ Stack organizes work into **Epics** and **Stories** displayed on a four-column k
 ### Homebrew
 
 ```
-brew tap davecusatis/tap
+brew tap davecusatis/tap/stack
 brew install stack
 ```
 
