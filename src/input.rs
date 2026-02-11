@@ -7,10 +7,10 @@ pub fn handle_board_key(key: KeyEvent) -> Option<Action> {
         KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => Some(Action::Quit),
         KeyCode::Char('a') => Some(Action::MoveStoryLeft),
         KeyCode::Char('s') => Some(Action::MoveStoryRight),
-        KeyCode::Left => Some(Action::MoveLeft),
-        KeyCode::Right => Some(Action::MoveRight),
-        KeyCode::Down => Some(Action::MoveDown),
-        KeyCode::Up => Some(Action::MoveUp),
+        KeyCode::Left | KeyCode::Char('h') => Some(Action::MoveLeft),
+        KeyCode::Right | KeyCode::Char('l') => Some(Action::MoveRight),
+        KeyCode::Down | KeyCode::Char('j') => Some(Action::MoveDown),
+        KeyCode::Up | KeyCode::Char('k') => Some(Action::MoveUp),
         KeyCode::Enter => Some(Action::OpenDetail),
         KeyCode::Char('n') => Some(Action::NewStory),
         KeyCode::Char('d') => Some(Action::DeleteStory),
@@ -22,8 +22,8 @@ pub fn handle_board_key(key: KeyEvent) -> Option<Action> {
 pub fn handle_detail_key(key: KeyEvent) -> Option<Action> {
     match key.code {
         KeyCode::Esc => Some(Action::CloseDetail),
-        KeyCode::Down => Some(Action::MoveDown),
-        KeyCode::Up => Some(Action::MoveUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Action::MoveDown),
+        KeyCode::Up | KeyCode::Char('k') => Some(Action::MoveUp),
         KeyCode::Char('e') => Some(Action::EditStoryTitle),
         KeyCode::Char('b') => Some(Action::EditStoryBody),
         KeyCode::Char('q') => Some(Action::Quit),
@@ -34,8 +34,8 @@ pub fn handle_detail_key(key: KeyEvent) -> Option<Action> {
 pub fn handle_epic_list_key(key: KeyEvent) -> Option<Action> {
     match key.code {
         KeyCode::Esc => Some(Action::CloseDetail),
-        KeyCode::Down => Some(Action::MoveDown),
-        KeyCode::Up => Some(Action::MoveUp),
+        KeyCode::Down | KeyCode::Char('j') => Some(Action::MoveDown),
+        KeyCode::Up | KeyCode::Char('k') => Some(Action::MoveUp),
         KeyCode::Enter => Some(Action::InputConfirm),
         KeyCode::Char('q') => Some(Action::Quit),
         _ => None,
@@ -78,6 +78,14 @@ mod tests {
     }
 
     #[test]
+    fn board_hjkl_navigation() {
+        assert_eq!(handle_board_key(key(KeyCode::Char('h'))), Some(Action::MoveLeft));
+        assert_eq!(handle_board_key(key(KeyCode::Char('l'))), Some(Action::MoveRight));
+        assert_eq!(handle_board_key(key(KeyCode::Char('j'))), Some(Action::MoveDown));
+        assert_eq!(handle_board_key(key(KeyCode::Char('k'))), Some(Action::MoveUp));
+    }
+
+    #[test]
     fn board_story_movement() {
         assert_eq!(handle_board_key(key(KeyCode::Char('a'))), Some(Action::MoveStoryLeft));
         assert_eq!(handle_board_key(key(KeyCode::Char('s'))), Some(Action::MoveStoryRight));
@@ -97,6 +105,18 @@ mod tests {
         assert_eq!(handle_detail_key(key(KeyCode::Char('e'))), Some(Action::EditStoryTitle));
         assert_eq!(handle_detail_key(key(KeyCode::Char('b'))), Some(Action::EditStoryBody));
         assert_eq!(handle_detail_key(key(KeyCode::Esc)), Some(Action::CloseDetail));
+    }
+
+    #[test]
+    fn detail_hjkl_navigation() {
+        assert_eq!(handle_detail_key(key(KeyCode::Char('j'))), Some(Action::MoveDown));
+        assert_eq!(handle_detail_key(key(KeyCode::Char('k'))), Some(Action::MoveUp));
+    }
+
+    #[test]
+    fn epic_list_hjkl_navigation() {
+        assert_eq!(handle_epic_list_key(key(KeyCode::Char('j'))), Some(Action::MoveDown));
+        assert_eq!(handle_epic_list_key(key(KeyCode::Char('k'))), Some(Action::MoveUp));
     }
 
     #[test]
