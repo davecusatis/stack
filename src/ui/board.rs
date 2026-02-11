@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
 use crate::app::App;
 use crate::models::Status;
 
@@ -12,13 +12,15 @@ pub fn render(app: &App, frame: &mut Frame) {
         .constraints([
             Constraint::Length(2),
             Constraint::Min(0),
+            Constraint::Length(8),
             Constraint::Length(1),
         ])
         .split(frame.area());
 
     render_header(app, frame, chunks[0]);
     render_columns(app, frame, chunks[1]);
-    render_footer(app, frame, chunks[2]);
+    render_preview(app, frame, chunks[2]);
+    render_footer(app, frame, chunks[3]);
 }
 
 fn render_header(app: &App, frame: &mut Frame, area: Rect) {
@@ -95,6 +97,63 @@ fn render_columns(app: &App, frame: &mut Frame, area: Rect) {
         }
 
         frame.render_stateful_widget(list, col_chunks[i], &mut state);
+    }
+}
+
+fn render_preview(app: &App, frame: &mut Frame, area: Rect) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title("Preview")
+        .border_style(Style::default().fg(Color::DarkGray));
+
+    match app.selected_story() {
+        Some(story) => {
+            let mut lines: Vec<Line> = Vec::new();
+
+            lines.push(Line::from(Span::styled(
+                &story.title,
+                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            )));
+
+            if story.description.is_empty() {
+                lines.push(Line::from(Span::styled(
+                    "(no description)",
+                    Style::default().fg(Color::DarkGray),
+                )));
+            } else {
+                for line in story.description.lines() {
+                    if let Some(heading) = line.strip_prefix("# ") {
+                        lines.push(Line::from(Span::styled(heading, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))));
+                    } else if let Some(heading) = line.strip_prefix("## ") {
+                        lines.push(Line::from(Span::styled(heading, Style::default().fg(Color::Cyan))));
+                    } else if let Some(heading) = line.strip_prefix("### ") {
+                        lines.push(Line::from(Span::styled(heading, Style::default().fg(Color::Cyan).add_modifier(Modifier::ITALIC))));
+                    } else if let Some(item) = line.strip_prefix("- ") {
+                        lines.push(Line::from(vec![
+                            Span::styled("  • ", Style::default().fg(Color::DarkGray)),
+                            Span::raw(item),
+                        ]));
+                    } else if line.starts_with("```") {
+                        lines.push(Line::from(Span::styled(line, Style::default().fg(Color::DarkGray))));
+                    } else {
+                        lines.push(Line::from(Span::raw(line)));
+                    }
+                }
+            }
+
+            let paragraph = Paragraph::new(lines)
+                .block(block)
+                .wrap(Wrap { trim: false });
+            frame.render_widget(paragraph, area);
+        }
+        None => {
+            let empty = Paragraph::new(Span::styled(
+                "No story selected",
+                Style::default().fg(Color::DarkGray),
+            ))
+            .block(block);
+            frame.render_widget(empty, area);
+        }
     }
 }
 
