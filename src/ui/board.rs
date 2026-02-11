@@ -3,6 +3,7 @@ use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Wrap};
+use tui_md;
 use crate::app::App;
 use crate::models::Status;
 
@@ -121,24 +122,7 @@ fn render_preview(app: &App, frame: &mut Frame, area: Rect) {
                     Style::default().fg(Color::DarkGray),
                 )));
             } else {
-                for line in story.description.lines() {
-                    if let Some(heading) = line.strip_prefix("# ") {
-                        lines.push(Line::from(Span::styled(heading, Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))));
-                    } else if let Some(heading) = line.strip_prefix("## ") {
-                        lines.push(Line::from(Span::styled(heading, Style::default().fg(Color::Cyan))));
-                    } else if let Some(heading) = line.strip_prefix("### ") {
-                        lines.push(Line::from(Span::styled(heading, Style::default().fg(Color::Cyan).add_modifier(Modifier::ITALIC))));
-                    } else if let Some(item) = line.strip_prefix("- ") {
-                        lines.push(Line::from(vec![
-                            Span::styled("  • ", Style::default().fg(Color::DarkGray)),
-                            Span::raw(item),
-                        ]));
-                    } else if line.starts_with("```") {
-                        lines.push(Line::from(Span::styled(line, Style::default().fg(Color::DarkGray))));
-                    } else {
-                        lines.push(Line::from(Span::raw(line)));
-                    }
-                }
+                lines.extend(tui_md::render(&story.description));
             }
 
             let paragraph = Paragraph::new(lines)
